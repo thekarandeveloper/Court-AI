@@ -25,8 +25,8 @@ struct ChatInputBar: View {
                     .clipShape(Circle())
             }
         }
-        .padding(.horizontal)
+       
         .padding(.vertical, 6)
-        .background(Color.white.shadow(radius: 2))
+
     }
 }
