@@ -33,12 +33,22 @@ struct MessageBubble: View {
                 
                 Group {
                     if isExpanded {
-                        Text(message.content)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(bubbleGradient)
-                            .foregroundColor(isFromUser ? .black : .white)
-                            .clipShape(ChatBubbleShape(isFromUser: isFromUser))
+                        if let attributed = try? AttributedString(markdown: message.content) {
+                            Text(attributed)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(bubbleGradient)
+                                .foregroundColor(isFromUser ? .black : .white)
+                                .clipShape(ChatBubbleShape(isFromUser: isFromUser))
+                        } else {
+                            Text(message.content)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(bubbleGradient)
+                                .foregroundColor(isFromUser ? .black : .white)
+                                .clipShape(ChatBubbleShape(isFromUser: isFromUser))
+                        }
+                           
                     } else {
                         HStack(spacing: 4) {
                             Text("View reply")

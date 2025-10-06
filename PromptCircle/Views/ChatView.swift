@@ -13,16 +13,27 @@ struct ChatView: View {
     var body: some View {
         VStack {
             CustomNavbar()
-            ScrollView {
-                LazyVStack {
-                    ForEach(vm.messages) { message in
-                        MessageBubble(message: message)
+            
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    LazyVStack(spacing: 4) {
+                        ForEach(vm.messages) { message in
+                            MessageBubble(message: message)
+                                .id(message.id) // Each message must have a unique id
+                        }
+                    }
+                }
+                .onChange(of: vm.messages.count) { _ in
+                    // Scroll to the last message whenever a new one is added
+                    if let lastMessage = vm.messages.last {
+                        withAnimation(.easeOut) {
+                            scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
                     }
                 }
             }
             
-            
-            ChatInputBar(message: $vm.userInput){
+            ChatInputBar(message: $vm.userInput) {
                 Task {
                     await vm.sendMessage()
                 }
