@@ -47,11 +47,11 @@ class ChatViewModel: ObservableObject {
         Instructions for Gemini:
         1. Answer the user's original prompt.
         2. Use Grok's response to help refine or improve your answer.
-        3. Keep the answer short, clear, and easy to understand.
+        3. Keep the answer very short, crisp clear, and easy to understand.
         4. Conclude your message with a line labeled:
 
-        (After a line break)
-        Final Answer:
+        (After a line brak)
+        Final Answer: (In Bold)
         <your concise summary here>
         """
         let geminiResponse = await AIService.shared.getAIResponse(for: .gemini, prompt: geminiPrompt)
