@@ -12,6 +12,7 @@ struct ChatView: View {
     
     var body: some View {
         VStack {
+            CustomNavbar()
             ScrollView {
                 LazyVStack {
                     ForEach(vm.messages) { message in
@@ -20,14 +21,10 @@ struct ChatView: View {
                 }
             }
             
-            HStack {
-                TextField("Ask something...", text: $vm.userInput)
-                    .textFieldStyle(.roundedBorder)
-                
-                Button("Send") {
-                    Task {
-                        await vm.sendMessage()
-                    }
+            
+            ChatInputBar(message: $vm.userInput){
+                Task {
+                    await vm.sendMessage()
                 }
             }
             .padding()
