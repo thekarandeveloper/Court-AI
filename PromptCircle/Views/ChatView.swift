@@ -68,8 +68,8 @@ struct ChatView: View {
                             .padding(.top, 180)
                         } else {
                             // Messages
-                            ForEach(vm.messages) { message in
-                                MessageBubble(message: message)
+                            ForEach($vm.messages) { $message in
+                                MessageBubble(message: $message)
                                     .id(message.id)
                             }
                         }

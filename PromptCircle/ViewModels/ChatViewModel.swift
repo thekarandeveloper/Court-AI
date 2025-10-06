@@ -8,6 +8,7 @@ import Foundation
 import SwiftUI
 
 @MainActor
+
 class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var userInput: String = ""
@@ -21,48 +22,72 @@ class ChatViewModel: ObservableObject {
         messages.append(Message(sender: .user, content: prompt))
         userInput = ""
 
-        // 1️⃣ Insert Grok placeholder (expanded initially)
+        // 1️⃣ Grok placeholder
         let grokIndex = messages.count
         let grokPlaceholder = Message(sender: .ai(model: .grok), content: "Thinking...", isCollapsed: false)
         messages.append(grokPlaceholder)
 
-        // 2️⃣ Insert Gemini placeholder (collapsed until real response)
+        // 2️⃣ Claude placeholder
+        let claudeIndex = messages.count
+        let claudePlaceholder = Message(sender: .ai(model: .claude), content: "Thinking...", isCollapsed: false)
+        messages.append(claudePlaceholder)
+
+        // 3️⃣ Gemini placeholder
         let geminiIndex = messages.count
-        let geminiPlaceholder = Message(sender: .ai(model: .gemini), content: "Waiting for Grok's reply...", isCollapsed: false)
+        let geminiPlaceholder = Message(sender: .ai(model: .gemini), content: "Analysing...", isCollapsed: false)
         messages.append(geminiPlaceholder)
 
-        // 3️⃣ Grok responds
-        let grokResponse = await AIService.shared.getAIResponse(for: .grok, prompt: prompt)
+        // 4️⃣ Grok responds
+        let grokPrompt = """
+        User Prompt: \(prompt)
+        
+        Answer in short and crisp, but keep all imortant points
+        
+        """
+        let grokResponse = await AIService.shared.getAIResponse(for: .grok, prompt: grokPrompt)
         withAnimation(.spring()) {
             messages[grokIndex] = Message(sender: .ai(model: .grok), content: grokResponse, isCollapsed: false)
         }
 
-        // 4️⃣ Gemini responds after Grok
+        // 5️⃣ Claude responds (uses Grok's response as context)
+        let claudePrompt = """
+        User Prompt: \(prompt)
+        
+        Answer in short and crisp, but keep all imortant points
+        """
+        let claudeResponse = await AIService.shared.getAIResponse(for: .claude, prompt: claudePrompt)
+        withAnimation(.spring()) {
+            messages[claudeIndex] = Message(sender: .ai(model: .claude), content: claudeResponse, isCollapsed: false)
+            messages[grokIndex].isCollapsed = true
+        }
+
+        // 6️⃣ Gemini responds (final summary using Grok + Claude)
         let geminiPrompt = """
         User Prompt: \(prompt)
 
-        Grok's Response (for context only):
+        Grok's Response:
         \(grokResponse)
 
-        Instructions for Gemini:
-        1. Answer the user's original prompt.
-        2. Use Grok's response to help refine or improve your answer.
-        3. Keep the answer very short, crisp clear, and easy to understand.
-        4. Conclude your message with a line labeled:
+        Claude's Response:
+        \(claudeResponse)
 
-        (After a line brak)
-        Final Answer: (In Bold)
-        <your concise summary here>
+        Instructions for Gemini:
+        - Analyze both responses and give one clear, single-line answer.
+        - Start with "We recommend".
+        - Use only collective terms like "we", "us", or "our" — never "I", "me", or "my".
+        - Keep it short, crisp, and to the point.
+        - Do not repeat the prompt or include reasoning.
+        - Output only the final recommendation line.
         """
         let geminiResponse = await AIService.shared.getAIResponse(for: .gemini, prompt: geminiPrompt)
-
+        messages[claudeIndex].isCollapsed = true
+        print(messages[claudeIndex].isCollapsed)
         withAnimation(.easeInOut) {
-            // Replace Gemini placeholder with real response
             messages[geminiIndex] = Message(sender: .ai(model: .gemini), content: geminiResponse, isCollapsed: false)
-
-            // Collapse Grok bubble automatically after Gemini arrives
-            let collapsedGrok = Message(sender: .ai(model: .grok), content: grokResponse, isCollapsed: true)
-            messages[grokIndex] = collapsedGrok
+            
+            // Collapse Grok & Claude bubbles automatically
+         
+            
         }
     }
 }

@@ -10,7 +10,7 @@ import Foundation
 enum AIModel: String, CaseIterable, Codable, Equatable {
     case grok = "Grok"
     case gemini = "Gemini"
-   
+    case claude = "Claude"
 }
 
 enum SenderType: Codable, Equatable {

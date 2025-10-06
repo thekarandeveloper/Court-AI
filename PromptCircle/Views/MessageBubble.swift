@@ -8,13 +8,9 @@
 import SwiftUI
 
 struct MessageBubble: View {
-    let message: Message
-    @State private var isExpanded: Bool
+    @Binding var message: Message
 
-    init(message: Message) {
-        self.message = message
-        _isExpanded = State(initialValue: !message.isCollapsed)
-    }
+  
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -32,19 +28,25 @@ struct MessageBubble: View {
                 // Single gesture controlling expanded state
                 
                 Group {
-                    if isExpanded {
+                    if !message.isCollapsed {
                         if let attributed = try? AttributedString(markdown: message.content) {
                             Text(attributed)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(bubbleGradient)
+                                .background(
+                                            bubbleGradient
+                                                .clipShape(ChatBubbleShape(isFromUser: isFromUser))
+                                        )
                                 .foregroundColor(isFromUser ? .black : .white)
                                 .clipShape(ChatBubbleShape(isFromUser: isFromUser))
                         } else {
                             Text(message.content)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(bubbleGradient)
+                                .background(
+                                            bubbleGradient
+                                                .clipShape(ChatBubbleShape(isFromUser: isFromUser))
+                                        )
                                 .foregroundColor(isFromUser ? .black : .white)
                                 .clipShape(ChatBubbleShape(isFromUser: isFromUser))
                         }
@@ -62,12 +64,12 @@ struct MessageBubble: View {
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(bubbleGradient.opacity(0.5), lineWidth: 1)
                         )
-                        .contentShape(Rectangle())
+                        .contentShape(RoundedRectangle(cornerRadius: 16))
                     }
                 }
                 .frame(maxWidth: UIScreen.main.bounds.width * 0.7, alignment: messageAlignment)
                 .onTapGesture {
-                    withAnimation { isExpanded.toggle() }
+                    withAnimation { message.isCollapsed.toggle() }
                 }
 
             }
@@ -110,6 +112,12 @@ struct MessageBubble: View {
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
+            case .claude:
+                return LinearGradient(
+                    colors: [Color.orange.opacity(0.7), Color.orange.opacity(0.9), Color.green],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         }
     }
@@ -118,6 +126,8 @@ struct MessageBubble: View {
         switch model {
         case .grok: return "grokAvatar"
         case .gemini: return "geminiAvatar"
+        case .claude:
+            return "claudeAvatar"
         }
     }
 }
