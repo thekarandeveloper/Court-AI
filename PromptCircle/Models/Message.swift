@@ -57,11 +57,13 @@ struct Message: Identifiable, Codable {
     let sender: SenderType
     let content: String
     let timestamp: Date
+    var isCollapsed: Bool
     
-    init(id: UUID = UUID(), sender: SenderType, content: String, timestamp: Date = Date()) {
+    init(id: UUID = UUID(), sender: SenderType, content: String, timestamp: Date = Date(), isCollapsed: Bool = false) {
         self.id = id
         self.sender = sender
         self.content = content
         self.timestamp = timestamp
+        self.isCollapsed = isCollapsed
     }
 }

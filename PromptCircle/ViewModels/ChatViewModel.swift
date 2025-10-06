@@ -5,11 +5,13 @@
 //  Created by Karan Kumar on 06/10/25.
 //
 import Foundation
+import SwiftUI
 
 @MainActor
 class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var userInput: String = ""
+    @State var geminiMessage:Message = Message(sender: .ai(model: .gemini), content: "Waiting for Grok Response...")
     var panel: ChatPanel = ChatPanel(activeModels: [.grok, .gemini])
     
     func sendMessage() async {
@@ -23,7 +25,7 @@ class ChatViewModel: ObservableObject {
         // 1️⃣ First: Grok responds to the user prompt
         let grokModel: AIService.AIModel = .grok
         let grokResponse = await AIService.shared.getAIResponse(for: grokModel, prompt: prompt)
-        let grokMessage = Message(sender: .ai(model: .grok), content: grokResponse)
+        let grokMessage = Message(sender: .ai(model: .grok), content: grokResponse, isCollapsed: true)
         messages.append(grokMessage)
         
         // 2️⃣ Then: Gemini receives both user prompt + Grok response
@@ -34,7 +36,7 @@ class ChatViewModel: ObservableObject {
         Please summarize both and provide a short, crisp, final answer.
         """
         let geminiResponse = await AIService.shared.getAIResponse(for: geminiModel, prompt: geminiPrompt)
-        let geminiMessage = Message(sender: .ai(model: .gemini), content: geminiResponse)
+        geminiMessage = Message(sender: .ai(model: .gemini), content: geminiResponse)
         messages.append(geminiMessage)
     }
 }
