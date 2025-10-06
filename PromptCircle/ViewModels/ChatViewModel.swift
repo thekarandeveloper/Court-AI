@@ -72,10 +72,12 @@ class ChatViewModel: ObservableObject {
         \(claudeResponse)
 
         Instructions for Gemini:
-        - Analyze both responses and give one conclusion, clear, single-line answer.
+        - Read both responses carefully, understand their key points, and combine the best ideas from each.
+        - Think logically and naturally before answering — don’t sound robotic.
+        - Write a new, single-line conclusion that feels thoughtful and human.
         - Use only collective terms like "we", "us", or "our" — never "I", "me", or "my".
-        - Keep it short, crisp, and to the point.
-        - Output only the final line with answer in it.
+        - Keep it short, crisp, and directly answer the user’s prompt.
+        - Output only the final one-line answer.
         """
         let geminiResponse = await AIService.shared.getAIResponse(for: .gemini, prompt: geminiPrompt)
         messages[claudeIndex].isCollapsed = true

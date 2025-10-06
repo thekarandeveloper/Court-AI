@@ -114,7 +114,7 @@ struct MessageBubble: View {
                 )
             case .claude:
                 return LinearGradient(
-                    colors: [Color.orange.opacity(0.7), Color.orange.opacity(0.9), Color.green],
+                    colors: [Color.orange.opacity(0.7), Color.orange.opacity(0.9), Color.red],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
