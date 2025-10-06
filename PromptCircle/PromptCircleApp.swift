@@ -3,7 +3,6 @@
 //  PromptCircle
 //
 //  Created by Karan Kumar on 06/10/25.
-//
 
 import SwiftUI
 
@@ -11,7 +10,7 @@ import SwiftUI
 struct PromptCircleApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ChatView()
         }
     }
 }
