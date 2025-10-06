@@ -7,13 +7,13 @@
 
 import Foundation
 
-enum AIModel: String, CaseIterable, Codable {
+enum AIModel: String, CaseIterable, Codable, Equatable {
     case grok = "Grok"
     case gemini = "Gemini"
    
 }
 
-enum SenderType: Codable {
+enum SenderType: Codable, Equatable {
     case user
     case ai(model: AIModel)
     

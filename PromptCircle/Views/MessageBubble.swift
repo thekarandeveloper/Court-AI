@@ -5,130 +5,122 @@
 //  Created by Karan Kumar on 06/10/25.
 //
 
-
 import SwiftUI
 
 struct MessageBubble: View {
     let message: Message
-    
-    @State private var isExpanded: Bool = true // AI bubbles expanded by default
-    
+    @State private var isExpanded: Bool
+
+    init(message: Message) {
+        self.message = message
+        _isExpanded = State(initialValue: !message.isCollapsed)
+    }
+
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
+
             if case .ai(let model) = message.sender {
-                Image(avatarSymbol(for: model))
+                Image(avatarImage(for: model))
                     .resizable()
-                    .scaledToFit()
-                    .frame(width: 28, height: 28)
-                    .foregroundColor(avatarColor(for: model))
+                    .scaledToFill()
+                    .frame(width: 32, height: 32)
                     .clipShape(Circle())
-                // Collapsible AI Bubble
-                VStack(alignment: .leading) {
-                    if model == .grok {
-                        Button(action: {
-                            withAnimation(.spring()) {
-                                isExpanded.toggle()
-                            }
-                        }) {
-                            if isExpanded {
-                                Text(message.content)
-                                    .padding(12)
-                                    .background(bubbleGradient)
-                                    .foregroundColor(.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                    .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 2)
-                            } else {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "eye")
-                                    Text("View Grok’s reply")
-                                }
-                                .padding(12)
-                                .background(bubbleGradient)
-                                .foregroundColor(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 2)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    } else {
-                        // Normal AI Bubble
+            }
+
+            VStack(alignment: messageAlignment == .leading ? .leading : .trailing) {
+
+                // Single gesture controlling expanded state
+                
+                Group {
+                    if isExpanded {
                         Text(message.content)
-                            .padding(12)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
                             .background(bubbleGradient)
-                            .foregroundColor(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 2)
+                            .foregroundColor(isFromUser ? .black : .white)
+                            .clipShape(ChatBubbleShape(isFromUser: isFromUser))
+                    } else {
+                        HStack(spacing: 4) {
+                            Text("View reply")
+                                .foregroundStyle(bubbleGradient)
+                            Image(systemName: "eye")
+                                .foregroundStyle(bubbleGradient)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(bubbleGradient.opacity(0.5), lineWidth: 1)
+                        )
+                        .contentShape(Rectangle())
                     }
                 }
-                
-                Spacer()
+                .frame(maxWidth: UIScreen.main.bounds.width * 0.7, alignment: messageAlignment)
+                .onTapGesture {
+                    withAnimation { isExpanded.toggle() }
+                }
+
             }
-            
-            if case .user = message.sender {
-                Spacer()
-                
-                Text(message.content)
-                    .padding(12)
-                    .background(bubbleGradient)
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 2)
-            }
+            .frame(maxWidth: .infinity, alignment: messageAlignment)
+
+//            if case .user = message.sender {
+//                Spacer()
+//            }
         }
         .padding(.horizontal)
         .padding(.vertical, 4)
     }
-    
-    // MARK: - Helpers
-    private func avatarSymbol(for model: AIModel) -> String {
+
+    private var isFromUser: Bool { if case .user = message.sender { return true } else { return false } }
+
+    private var messageAlignment: Alignment { isFromUser ? .trailing : .leading }
+
+    private var bubbleGradient: LinearGradient {
+        switch message.sender {
+        case .user:
+            // Slightly richer gray with a hint of blue for user bubble
+            return LinearGradient(
+                colors: [Color.gray.opacity(0.25), Color.gray.opacity(0.4)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .ai(let model):
+            switch model {
+            case .grok:
+                // Purple gradient with depth
+                return LinearGradient(
+                    colors: [Color.purple.opacity(0.8), Color.purple, Color.purple.opacity(0.9)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .gemini:
+                // Green gradient with soft highlight
+                return LinearGradient(
+                    colors: [Color.green.opacity(0.7), Color.green.opacity(0.9), Color.green],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
+    }
+
+    private func avatarImage(for model: AIModel) -> String {
         switch model {
         case .grok: return "grokAvatar"
         case .gemini: return "geminiAvatar"
         }
     }
-    
-    private func avatarColor(for model: AIModel) -> Color {
-        switch model {
-        case .grok: return .purple
-        case .gemini: return .green
-        }
-    }
-    
-    private var bubbleGradient: LinearGradient {
-        switch message.sender {
-        case .user:
-            return LinearGradient(colors: [Color.blue.opacity(0.9), Color.cyan.opacity(0.9)],
-                                  startPoint: .topLeading, endPoint: .bottomTrailing)
-        case .ai(let model):
-            switch model {
-            case .grok:
-                return LinearGradient(colors: [Color.purple.opacity(0.9), Color.indigo.opacity(0.9)],
-                                      startPoint: .topLeading, endPoint: .bottomTrailing)
-            case .gemini:
-                return LinearGradient(colors: [Color.green.opacity(0.9), Color.teal.opacity(0.9)],
-                                      startPoint: .topLeading, endPoint: .bottomTrailing)
-            }
-        }
-    }
 }
+
 // MARK: - Chat Bubble Shape
+
 struct ChatBubbleShape: Shape {
     let isFromUser: Bool
-
+    
     func path(in rect: CGRect) -> Path {
         let cornerRadius: CGFloat = 16
         var path = Path()
-
-        if isFromUser {
-            // Bubble from right
-            path.addRoundedRect(in: rect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
-            path.move(to: CGPoint(x: rect.maxX - 8, y: rect.maxY - 8))
-        } else {
-            // Bubble from left
-            path.addRoundedRect(in: rect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
-            path.move(to: CGPoint(x: rect.minX + 8, y: rect.maxY - 8))
-        }
-
+        path.addRoundedRect(in: rect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
         return path
     }
 }

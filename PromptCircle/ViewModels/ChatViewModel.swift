@@ -11,32 +11,47 @@ import SwiftUI
 class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []
     @Published var userInput: String = ""
-    @State var geminiMessage:Message = Message(sender: .ai(model: .gemini), content: "Waiting for Grok Response...")
+
     var panel: ChatPanel = ChatPanel(activeModels: [.grok, .gemini])
-    
+
     func sendMessage() async {
         guard !userInput.isEmpty else { return }
-        
-        let userMessage = Message(sender: .user, content: userInput)
-        messages.append(userMessage)
+
         let prompt = userInput
+        messages.append(Message(sender: .user, content: prompt))
         userInput = ""
-        
-        // 1️⃣ First: Grok responds to the user prompt
-        let grokModel: AIService.AIModel = .grok
-        let grokResponse = await AIService.shared.getAIResponse(for: grokModel, prompt: prompt)
-        let grokMessage = Message(sender: .ai(model: .grok), content: grokResponse, isCollapsed: true)
-        messages.append(grokMessage)
-        
-        // 2️⃣ Then: Gemini receives both user prompt + Grok response
-        let geminiModel: AIService.AIModel = .gemini
+
+        // 1️⃣ Insert Grok placeholder (expanded initially)
+        let grokIndex = messages.count
+        let grokPlaceholder = Message(sender: .ai(model: .grok), content: "Thinking...", isCollapsed: false)
+        messages.append(grokPlaceholder)
+
+        // 2️⃣ Insert Gemini placeholder (collapsed until real response)
+        let geminiIndex = messages.count
+        let geminiPlaceholder = Message(sender: .ai(model: .gemini), content: "Waiting for Grok's reply...", isCollapsed: false)
+        messages.append(geminiPlaceholder)
+
+        // 3️⃣ Grok responds
+        let grokResponse = await AIService.shared.getAIResponse(for: .grok, prompt: prompt)
+        withAnimation(.spring()) {
+            messages[grokIndex] = Message(sender: .ai(model: .grok), content: grokResponse, isCollapsed: false)
+        }
+
+        // 4️⃣ Gemini responds after Grok
         let geminiPrompt = """
         User Prompt: \(prompt)
         Grok Response: \(grokResponse)
         Please summarize both and provide a short, crisp, final answer.
         """
-        let geminiResponse = await AIService.shared.getAIResponse(for: geminiModel, prompt: geminiPrompt)
-        geminiMessage = Message(sender: .ai(model: .gemini), content: geminiResponse)
-        messages.append(geminiMessage)
+        let geminiResponse = await AIService.shared.getAIResponse(for: .gemini, prompt: geminiPrompt)
+
+        withAnimation(.easeInOut) {
+            // Replace Gemini placeholder with real response
+            messages[geminiIndex] = Message(sender: .ai(model: .gemini), content: geminiResponse, isCollapsed: false)
+
+            // Collapse Grok bubble automatically after Gemini arrives
+            let collapsedGrok = Message(sender: .ai(model: .grok), content: grokResponse, isCollapsed: true)
+            messages[grokIndex] = collapsedGrok
+        }
     }
 }
