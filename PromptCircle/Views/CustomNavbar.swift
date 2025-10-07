@@ -26,7 +26,7 @@ struct CustomNavbar: View {
                 Text("Hi, Karan")
                     .font(.headline)
                     .foregroundColor(.primary)
-                Text("Let's create something smart")
+                Text("Discuss Anything")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
