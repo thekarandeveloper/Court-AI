@@ -1,6 +1,6 @@
 //
 //  APIKeys.swift
-//  PromptCircle
+//  CourtAi
 //
 //  Reads API keys from APIKeys.plist (gitignored).
 //  To set up: copy APIKeys.plist.template → APIKeys.plist and fill in your keys.

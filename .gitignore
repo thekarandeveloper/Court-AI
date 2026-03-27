@@ -1,5 +1,5 @@
 # ── API Keys (NEVER commit this) ─────────────────────────────────────────────
-PromptCircle/APIKeys.plist
+CourtAi/APIKeys.plist
 
 # ── Xcode ─────────────────────────────────────────────────────────────────────
 *.xcuserstate

@@ -1,6 +1,6 @@
 //
 //  AgentSessionViewModel.swift
-//  PromptCircle
+//  CourtAi
 //
 //  Orchestrates the multi-round AI Council discussion.
 //

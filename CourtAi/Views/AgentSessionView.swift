@@ -1,6 +1,6 @@
 //
 //  AgentSessionView.swift
-//  PromptCircle
+//  CourtAi
 //
 //  AI Council Session — single clean verdict UI
 //

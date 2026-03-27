@@ -1,6 +1,6 @@
 //
 //  CourtViewModel.swift
-//  PromptCircle
+//  CourtAi
 //
 //  3-agent deliberation pipeline:
 //    Hearing 1 — agents independently form stances (Gemini FOR, LLaMA AGAINST)

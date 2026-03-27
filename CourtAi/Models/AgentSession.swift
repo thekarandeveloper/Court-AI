@@ -1,6 +1,6 @@
 //
 //  AgentSession.swift
-//  PromptCircle
+//  CourtAi
 //
 //  Council Session data models
 //

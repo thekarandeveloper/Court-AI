@@ -1,6 +1,6 @@
 //
 //  MessageBubble.swift
-//  PromptCircle
+//  CourtAi
 //
 //  Created by Karan Kumar on 06/10/25.
 //

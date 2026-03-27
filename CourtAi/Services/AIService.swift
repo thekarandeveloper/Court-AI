@@ -1,6 +1,6 @@
 //
 //  AIService.swift
-//  PromptCircle
+//  CourtAi
 //
 
 import Foundation

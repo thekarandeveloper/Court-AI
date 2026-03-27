@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "CD7F62CB2E93A92800F96F73"
-               BuildableName = "PromptCircle.app"
-               BlueprintName = "PromptCircle"
-               ReferencedContainer = "container:PromptCircle.xcodeproj">
+               BuildableName = "CourtAi.app"
+               BlueprintName = "CourtAi"
+               ReferencedContainer = "container:CourtAi.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "CD7F62CB2E93A92800F96F73"
-            BuildableName = "PromptCircle.app"
-            BlueprintName = "PromptCircle"
-            ReferencedContainer = "container:PromptCircle.xcodeproj">
+            BuildableName = "CourtAi.app"
+            BlueprintName = "CourtAi"
+            ReferencedContainer = "container:CourtAi.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "CD7F62CB2E93A92800F96F73"
-            BuildableName = "PromptCircle.app"
-            BlueprintName = "PromptCircle"
-            ReferencedContainer = "container:PromptCircle.xcodeproj">
+            BuildableName = "CourtAi.app"
+            BlueprintName = "CourtAi"
+            ReferencedContainer = "container:CourtAi.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

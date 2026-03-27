@@ -1,6 +1,6 @@
 //
 //  CourtView.swift
-//  PromptCircle
+//  CourtAi
 //
 
 import SwiftUI
