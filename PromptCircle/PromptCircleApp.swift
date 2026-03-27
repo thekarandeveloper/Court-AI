@@ -10,7 +10,7 @@ import SwiftUI
 struct PromptCircleApp: App {
     var body: some Scene {
         WindowGroup {
-            ChatView()
+            CourtView()
         }
     }
 }
