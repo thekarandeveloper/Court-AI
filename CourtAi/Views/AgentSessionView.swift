@@ -10,13 +10,6 @@ import SwiftUI
 // MARK: - AIService.AIModel display helpers
 
 private extension AIService.AIModel {
-    var displayName: String {
-        switch self {
-        case .grok:   return "Grok"
-        case .claude: return "Claude"
-        case .gemini: return "Gemini"
-        }
-    }
     var color: Color {
         switch self {
         case .grok:   return Color(red: 0.54, green: 0.36, blue: 0.96)

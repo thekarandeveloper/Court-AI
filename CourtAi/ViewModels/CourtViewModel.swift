@@ -3,9 +3,11 @@
 //  CourtAi
 //
 //  3-agent deliberation pipeline:
-//    Hearing 1 — agents independently form stances (Gemini FOR, LLaMA AGAINST)
+//    Hearing 1 — agents independently form stances (FOR agent argues FOR, AGAINST agent argues AGAINST)
 //    Hearing 2 — cross-examination with partial observability (each agent sees only opponent's H1)
-//    Verdict   — Claude synthesises all arguments + evidence → 1-line ruling
+//    Verdict   — Judge synthesises all arguments + evidence → 1-line ruling
+//
+//  Roles are read from @AppStorage so the user's choice from onboarding/settings is respected.
 //
 
 import Foundation
@@ -13,16 +15,16 @@ import SwiftUI
 
 // MARK: - Token budgets (output tokens per call)
 private enum Tokens {
-    static let argument = 180   // 2-3 sentences + evidence
-    static let rebuttal = 200   // attack opponent + own case + evidence
-    static let verdict  = 60    // exactly 1 sentence
+    static let argument = 180
+    static let rebuttal = 200
+    static let verdict  = 60
 }
 
 enum CourtPhase: Equatable {
     case idle
-    case hearing1  // parallel: Gemini FOR, LLaMA AGAINST
-    case hearing2  // parallel: LLaMA rebuts, Gemini rebuts — partial observability
-    case judging   // Claude rules in 1 line
+    case hearing1
+    case hearing2
+    case judging
     case complete
 }
 
@@ -46,6 +48,11 @@ class CourtViewModel: ObservableObject {
     // Final verdict
     @Published var verdict: String?
 
+    // Current role assignments (set before startCourt, read from AppStorage by CourtView)
+    var forModel:     AIService.AIModel = .gemini
+    var againstModel: AIService.AIModel = .grok
+    var judgeModel:   AIService.AIModel = .claude
+
     // MARK: - Control
 
     func startCourt() {
@@ -65,53 +72,55 @@ class CourtViewModel: ObservableObject {
 
     private func runCourt(_ q: String) async {
         let svc = AIService.shared
+        let f = forModel
+        let a = againstModel
+        let j = judgeModel
 
         // ── Hearing 1: independent stance formation ──────────────────────────
         phase = .hearing1
-        async let gH1 = svc.getAIResponse(for: .gemini, prompt: Self.forPrompt(q),     maxTokens: Tokens.argument)
-        async let lH1 = svc.getAIResponse(for: .grok,   prompt: Self.againstPrompt(q), maxTokens: Tokens.argument)
-        let (rawGH1, rawLH1) = await (gH1, lH1)
-        let (h1fa, h1fe) = Self.parse(rawGH1)
-        let (h1aa, h1ae) = Self.parse(rawLH1)
+        async let fH1 = svc.getAIResponse(for: f, prompt: Self.forPrompt(q),     maxTokens: Tokens.argument)
+        async let aH1 = svc.getAIResponse(for: a, prompt: Self.againstPrompt(q), maxTokens: Tokens.argument)
+        let (rawFH1, rawAH1) = await (fH1, aH1)
+        let (h1fa, h1fe) = Self.parse(rawFH1)
+        let (h1aa, h1ae) = Self.parse(rawAH1)
         withAnimation(.spring(duration: 0.4)) {
             h1ForArg = h1fa; h1ForEvidence = h1fe
             h1AgArg  = h1aa; h1AgEvidence  = h1ae
         }
 
         // ── Hearing 2: cross-examination (partial observability) ─────────────
-        // Each agent sees ONLY the opponent's Hearing 1 output — not their own.
         phase = .hearing2
-        async let gH2 = svc.getAIResponse(
-            for: .grok,
+        async let fH2 = svc.getAIResponse(
+            for: f,
             prompt: Self.rebuttalForPrompt(q, opponentArg: h1aa, opponentEvidence: h1ae),
             maxTokens: Tokens.rebuttal
         )
-        async let lH2 = svc.getAIResponse(
-            for: .gemini,
+        async let aH2 = svc.getAIResponse(
+            for: a,
             prompt: Self.rebuttalAgainstPrompt(q, opponentArg: h1fa, opponentEvidence: h1fe),
             maxTokens: Tokens.rebuttal
         )
-        let (rawGH2, rawLH2) = await (gH2, lH2)
-        let (h2fa, h2fe) = Self.parse(rawGH2)
-        let (h2aa, h2ae) = Self.parse(rawLH2)
+        let (rawFH2, rawAH2) = await (fH2, aH2)
+        let (h2fa, h2fe) = Self.parse(rawFH2)
+        let (h2aa, h2ae) = Self.parse(rawAH2)
         withAnimation(.spring(duration: 0.4)) {
             h2ForArg = h2fa; h2ForEvidence = h2fe
             h2AgArg  = h2aa; h2AgEvidence  = h2ae
         }
 
-        // ── Verdict: Claude synthesises all 8 outputs ────────────────────────
+        // ── Verdict: judge synthesises all 8 outputs ─────────────────────────
         phase = .judging
         let ruling = await svc.getAIResponse(
-            for: .claude,
+            for: j,
             prompt: Self.verdictPrompt(q, h1fa, h1fe, h1aa, h1ae, h2fa, h2fe, h2aa, h2ae),
             maxTokens: Tokens.verdict
         )
         withAnimation(.spring(duration: 0.5)) { verdict = ruling; phase = .complete }
+        TrialManager.recordUse()
     }
 
     // MARK: - Response Parser
 
-    /// Splits structured "ARGUMENT: … EVIDENCE: …" response into two strings.
     static func parse(_ raw: String) -> (arg: String, evidence: String) {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if let range = text.range(of: "EVIDENCE:", options: .caseInsensitive) {

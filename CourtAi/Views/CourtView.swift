@@ -32,18 +32,24 @@ private enum P {
     static let goldBg   = Color(red: 1.00, green: 0.97, blue: 0.87)
     static let goldBd   = Color(red: 0.80, green: 0.62, blue: 0.14)
     static let goldText = Color(red: 0.62, green: 0.44, blue: 0.04)
-
-    // Model colors
-    static let gemini   = Color(red: 0.09, green: 0.56, blue: 0.90)
-    static let llama    = Color(red: 0.52, green: 0.32, blue: 0.88)
-    static let claude   = Color(red: 0.84, green: 0.46, blue: 0.10)
 }
 
 // MARK: - Root
 
 struct CourtView: View {
     @StateObject private var vm = CourtViewModel()
-    @FocusState private var focused: Bool
+    @FocusState  private var focused: Bool
+
+    @AppStorage("forModelRaw")     private var forModelRaw     = "gemini"
+    @AppStorage("againstModelRaw") private var againstModelRaw = "grok"
+    @AppStorage("judgeModelRaw")   private var judgeModelRaw   = "claude"
+
+    @State private var showSettings    = false
+    @State private var showTrialExpired = false
+
+    var forModel:     AIService.AIModel { AIService.AIModel(rawValue: forModelRaw)     ?? .gemini }
+    var againstModel: AIService.AIModel { AIService.AIModel(rawValue: againstModelRaw) ?? .grok   }
+    var judgeModel:   AIService.AIModel { AIService.AIModel(rawValue: judgeModelRaw)   ?? .claude }
 
     var body: some View {
         ZStack {
@@ -64,12 +70,25 @@ struct CourtView: View {
         }
         .animation(.spring(duration: 0.45), value: vm.phase == .idle)
         .preferredColorScheme(.light)
+        .sheet(isPresented: $showSettings)    { SettingsView() }
+        .sheet(isPresented: $showTrialExpired) { TrialExpiredView() }
     }
 
     // MARK: - Input Screen
 
     private var inputScreen: some View {
         VStack(spacing: 0) {
+            // Settings gear — top right
+            HStack {
+                Spacer()
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(P.muted)
+                        .padding(16)
+                }
+            }
+
             Spacer()
 
             // Logo
@@ -128,6 +147,13 @@ struct CourtView: View {
 
                 Button {
                     focused = false
+                    guard TrialManager.isTrialActive || TrialManager.hasOwnKeys else {
+                        showTrialExpired = true
+                        return
+                    }
+                    vm.forModel     = forModel
+                    vm.againstModel = againstModel
+                    vm.judgeModel   = judgeModel
                     vm.startCourt()
                 } label: {
                     HStack(spacing: 9) {
@@ -162,16 +188,35 @@ struct CourtView: View {
 
             Spacer()
 
-            // Agent row
+            // Trial badge
+            if !TrialManager.hasOwnKeys {
+                let remaining = TrialManager.usesRemaining
+                HStack(spacing: 5) {
+                    Image(systemName: remaining > 0 ? "gift.fill" : "lock.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(remaining > 0 ? Color(red: 0.62, green: 0.44, blue: 0.04) : P.muted)
+                    Text(remaining > 0
+                         ? "\(remaining) free session\(remaining == 1 ? "" : "s") left"
+                         : "Add your API keys to continue")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(remaining > 0 ? Color(red: 0.62, green: 0.44, blue: 0.04) : P.muted)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(remaining > 0 ? Color(red: 1.00, green: 0.97, blue: 0.87) : P.faint.opacity(0.6))
+                .clipShape(Capsule())
+                .padding(.bottom, 8)
+            }
+
+            // Agent row — dynamic from user's role choices
             HStack(spacing: 6) {
-                agentChip("Gemini", color: P.gemini)
+                agentChip(forModel.displayName,     color: forModel.chipColor)
                 Text("vs").font(.system(size: 10)).foregroundColor(P.muted.opacity(0.5))
-                agentChip("LLaMA", color: P.llama)
+                agentChip(againstModel.displayName, color: againstModel.chipColor)
                 Capsule().fill(P.faint).frame(width: 1, height: 14)
                     .padding(.horizontal, 4)
                 Image(systemName: "hammer.fill")
-                    .font(.system(size: 8)).foregroundColor(P.claude.opacity(0.7))
-                agentChip("Claude", color: P.claude)
+                    .font(.system(size: 8)).foregroundColor(judgeModel.chipColor.opacity(0.7))
+                agentChip(judgeModel.displayName,   color: judgeModel.chipColor)
                 Text("· Judge").font(.system(size: 10)).foregroundColor(P.muted.opacity(0.5))
             }
             .padding(.bottom, 44)
@@ -222,8 +267,8 @@ struct CourtView: View {
                     hearingBlock(
                         number: "1",
                         subtitle: "Opening Arguments",
-                        forModel: "Gemini", forModelColor: P.gemini, forArg: vm.h1ForArg, forEv: vm.h1ForEvidence,
-                        agModel: "LLaMA",  agModelColor: P.llama,   agArg: vm.h1AgArg, agEv: vm.h1AgEvidence,
+                        forModel: forModel,   forArg: vm.h1ForArg, forEv: vm.h1ForEvidence,
+                        agModel: againstModel, agArg: vm.h1AgArg,  agEv: vm.h1AgEvidence,
                         isActive: vm.phase == .hearing1
                     )
 
@@ -232,8 +277,8 @@ struct CourtView: View {
                         hearingBlock(
                             number: "2",
                             subtitle: "Cross-Examination",
-                            forModel: "LLaMA",  forModelColor: P.llama,   forArg: vm.h2ForArg, forEv: vm.h2ForEvidence,
-                            agModel: "Gemini", agModelColor: P.gemini, agArg: vm.h2AgArg, agEv: vm.h2AgEvidence,
+                            forModel: forModel,   forArg: vm.h2ForArg, forEv: vm.h2ForEvidence,
+                            agModel: againstModel, agArg: vm.h2AgArg,  agEv: vm.h2AgEvidence,
                             isActive: vm.phase == .hearing2
                         )
                         .id("h2")
@@ -270,8 +315,8 @@ struct CourtView: View {
     private func hearingBlock(
         number: String,
         subtitle: String,
-        forModel: String, forModelColor: Color, forArg: String?, forEv: String?,
-        agModel: String,  agModelColor: Color,  agArg: String?,  agEv: String?,
+        forModel: AIService.AIModel, forArg: String?, forEv: String?,
+        agModel: AIService.AIModel,  agArg: String?,  agEv: String?,
         isActive: Bool
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -297,8 +342,8 @@ struct CourtView: View {
 
             // Cards
             HStack(alignment: .top, spacing: 10) {
-                argCard(side: "FOR",     model: forModel, modelColor: forModelColor, arg: forArg, ev: forEv, loading: isActive)
-                argCard(side: "AGAINST", model: agModel,  modelColor: agModelColor,  arg: agArg,  ev: agEv,  loading: isActive)
+                argCard(side: "FOR",     model: forModel, arg: forArg, ev: forEv, loading: isActive)
+                argCard(side: "AGAINST", model: agModel,  arg: agArg,  ev: agEv,  loading: isActive)
             }
             .padding(.horizontal, 16)
         }
@@ -309,7 +354,7 @@ struct CourtView: View {
 
     private func argCard(
         side: String,
-        model: String, modelColor: Color,
+        model: AIService.AIModel,
         arg: String?, ev: String?,
         loading: Bool
     ) -> some View {
@@ -331,10 +376,10 @@ struct CourtView: View {
                     .clipShape(Capsule())
                 Spacer()
                 HStack(spacing: 3) {
-                    Circle().fill(modelColor).frame(width: 5, height: 5)
-                    Text(model)
+                    Circle().fill(model.chipColor).frame(width: 5, height: 5)
+                    Text(model.displayName)
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(modelColor)
+                        .foregroundColor(model.chipColor)
                 }
             }
             .padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 10)
@@ -405,10 +450,10 @@ struct CourtView: View {
                 }
                 Spacer()
                 HStack(spacing: 4) {
-                    Circle().fill(P.claude).frame(width: 5, height: 5)
-                    Text("Hon. Claude  ·  Presiding Judge")
+                    Circle().fill(judgeModel.chipColor).frame(width: 5, height: 5)
+                    Text("Hon. \(judgeModel.displayName)  ·  Presiding Judge")
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(P.claude.opacity(0.75))
+                        .foregroundColor(judgeModel.chipColor.opacity(0.75))
                 }
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
