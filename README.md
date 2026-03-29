@@ -1,4 +1,4 @@
-# CourtAI
+Ap# CourtAI
 
 A 3-agent iOS deliberation system where two LLMs argue opposite sides of a question under partial observability, and a third model delivers a binary verdict. Each agent operates independently — no agent sees the full context of the other until cross-examination, which prevents echo chambers and forces genuine adversarial reasoning.
 
@@ -19,7 +19,7 @@ A 3-agent iOS deliberation system where two LLMs argue opposite sides of a quest
 
 A full deliberation session — question in, verdict out — showing all three phases live on device.
 
-https://github.com/user-attachments/assets/6eb60ce4-c763-486c-8cb7-209e23b5ab0f
+https://github.com/user-attachments/assets/01510875-a02c-4193-bcfc-48eee48bb560
 
 ---
 
