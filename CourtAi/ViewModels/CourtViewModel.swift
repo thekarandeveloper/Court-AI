@@ -75,6 +75,7 @@ class CourtViewModel: ObservableObject {
         let f = forModel
         let a = againstModel
         let j = judgeModel
+        let startTime = Date()
 
         // ── Hearing 1: independent stance formation ──────────────────────────
         phase = .hearing1
@@ -116,6 +117,18 @@ class CourtViewModel: ObservableObject {
             maxTokens: Tokens.verdict
         )
         withAnimation(.spring(duration: 0.5)) { verdict = ruling; phase = .complete }
+
+        SessionLogger.log(
+            question:      q,
+            forModel:      f.rawValue, againstModel: a.rawValue, judgeModel: j.rawValue,
+            h1ForArg:      h1fa, h1ForEvidence: h1fe,
+            h1AgArg:       h1aa, h1AgEvidence:  h1ae,
+            h2ForArg:      h2fa, h2ForEvidence: h2fe,
+            h2AgArg:       h2aa, h2AgEvidence:  h2ae,
+            verdict:       ruling,
+            duration:      Date().timeIntervalSince(startTime)
+        )
+
         TrialManager.recordUse()
     }
 

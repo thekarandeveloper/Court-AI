@@ -1,135 +1,127 @@
-# CourtAI — Multi-Agent Deliberation System
+# CourtAI
 
-> *Does forced adversarial role-swapping between heterogeneous LLMs produce more accurate and less biased decisions than single-model inference?*
-
-A 3-agent iOS pipeline where LLMs independently form stances, cross-examine each other under partial observability, and synthesise a final verdict — built as a direct implementation of multi-agent deliberation as a research question.
+A 3-agent iOS deliberation system where two LLMs argue opposite sides of a question under partial observability, and a third model delivers a binary verdict. Each agent operates independently — no agent sees the full context of the other until cross-examination, which prevents echo chambers and forces genuine adversarial reasoning.
 
 ---
 
-## System Architecture
+## Research Paper
+
+| | |
+|---|---|
+| **Title** | [Verdict Sensitivity to Model Role Assignment in a Multi-Agent Deliberation System](RESEARCH.md) |
+| **Question** | Does swapping which model argues FOR vs AGAINST change the final verdict? |
+| **Result** | 33–53% of verdicts flipped across 60 sessions, 15 questions, 2 judge models |
+| **Platform** | CourtAI — this app |
+
+---
+
+## How It Works
+
+The pipeline runs in three sequential phases. Hearing 1 and 2 each make two API calls in parallel.
 
 ```
 User Question
       │
-      ▼
-┌─────────────────────────────────────────────┐
-│  HEARING 1 — Independent Stance Formation   │
-│                                             │
-│  Gemini-2.5-Flash  →  FOR                  │  parallel
-│  LLaMA-3.3-70B     →  AGAINST             │  async let
-│                                             │
-│  Each agent: Argument + Evidence            │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│  HEARING 2 — Cross-Examination              │
-│             (Partial Observability)         │
-│                                             │
-│  LLaMA  sees only Gemini's H1  →  rebuts   │  parallel
-│  Gemini sees only LLaMA's H1   →  rebuts   │  async let
-│                                             │
-│  Each agent: Rebuttal + Evidence            │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│  VERDICT — Judicial Synthesis               │
-│                                             │
-│  Claude-Sonnet sees all 8 outputs           │
-│  Verifies evidence, checks logic,           │
-│  applies own knowledge                      │
-│                                             │
-│  Output: 1 sentence — YES or NO            │
-└─────────────────────────────────────────────┘
+      ├── Agent A (FOR)     ──► Argument + Evidence  ┐
+      └── Agent B (AGAINST) ──► Argument + Evidence  ┘  Hearing 1 (parallel)
+
+            │
+            │  Partial observability: each agent sees only the opponent's H1,
+            │  not their own. Forces targeted rebuttal, not repetition.
+            │
+      ├── Agent A rebuts B's H1 ──► Rebuttal + Evidence  ┐
+      └── Agent B rebuts A's H1 ──► Rebuttal + Evidence  ┘  Hearing 2 (parallel)
+
+            │
+            └── Judge sees all 8 outputs ──► "The court rules — YES/NO: ..."
 ```
 
----
+**Total: 5 API calls · ~15s end-to-end · all three roles are user-configurable**
 
-## Key Design Decisions
+### Key Design Decisions
 
-### Partial Observability
-In Hearing 2, each agent receives **only the opponent's Hearing 1 output** — not their own. This forces targeted rebuttals rather than generic argument repetition, and mirrors real cross-examination conditions where each side responds specifically to what was said.
+**Partial observability** — In Hearing 2, each agent receives only the opponent's Hearing 1 output, not a recap of their own. This ensures agents respond to what was actually argued rather than restating their opening position.
 
-### Heterogeneous Models
-Using three architecturally distinct models (Gemini, LLaMA, Claude) ensures that argument quality — not a single model's internal biases — drives the outcome. A homogeneous setup (same model arguing both sides) produces echo chambers.
+**Heterogeneous models** — Using three models from three different providers (Google, Meta via Groq, Anthropic) means no single model's priors dominate the outcome. A homogeneous setup produces echo chambers.
 
-### Evidence Gating
-Agents must submit concrete proof alongside every argument. If no verifiable evidence exists, they must declare it. Claude sees this during verdict synthesis — weak or absent evidence is weighted accordingly.
+**Evidence gating** — Every argument slot requires either a concrete fact or an explicit `"None."`. The judge sees argument and evidence as separate fields and weighs them independently.
 
-### Token Budgets
-Each API call has a hard output token limit set at the call site:
+**Token budgets** — Hard output limits at every call site prevent padding and keep total session time under 20 seconds.
 
-| Call type      | Max output tokens |
-|----------------|-------------------|
-| H1 argument    | 180               |
-| H2 rebuttal    | 200               |
-| Verdict        | 60                |
-
-Gemini uses `thinkingBudget: 0` to suppress internal reasoning tokens — saves ~300–500 tokens per call and reduces latency without affecting output quality.
+| Phase | Max tokens |
+|-------|-----------|
+| H1 argument | 180 |
+| H2 rebuttal | 200 |
+| Verdict | 80 |
 
 ---
 
 ## Models
 
-| Role    | Model             | Provider  |
-|---------|-------------------|-----------|
-| Agent A | Gemini 2.5 Flash  | Google    |
-| Agent B | LLaMA-3.3-70B     | Groq      |
-| Judge   | Claude Sonnet     | Anthropic |
+All three roles are independently assignable from the app's settings screen. The research experiment ran two configurations: LLaMA=FOR / Claude=AGAINST / Gemini=JUDGE and LLaMA=FOR / Claude=AGAINST / LLaMA-8B=JUDGE.
 
----
-
-## Tech Stack
-
-- **SwiftUI** — declarative UI, light mode
-- **Swift Concurrency** — `async let` for true parallel API calls, `@MainActor` for state isolation
-- **MVVM** — `CourtViewModel` owns all pipeline logic and phase transitions; views are stateless
-- **3 REST APIs** — Gemini `generateContent`, Groq OpenAI-compatible, Anthropic Messages API
-
----
-
-## Setup
-
-1. Clone the repo
-2. Copy the key template:
-   ```bash
-   cp PromptCircle/APIKeys.plist.template PromptCircle/APIKeys.plist
-   ```
-3. Open `APIKeys.plist` and fill in your keys:
-   - **Gemini** — [Google AI Studio](https://aistudio.google.com/apikey)
-   - **Groq** — [Groq Console](https://console.groq.com/keys)
-   - **Claude** — [Anthropic Console](https://console.anthropic.com)
-4. Open `PromptCircle.xcodeproj` in Xcode and run
-
-> `APIKeys.plist` is listed in `.gitignore` — your keys will never be committed.
+| Role | Available Models | Provider |
+|------|-----------------|----------|
+| FOR | Gemini 2.5 Flash · LLaMA-3.3-70B · Claude Sonnet 4.6 | Google · Groq · Anthropic |
+| AGAINST | Gemini 2.5 Flash · LLaMA-3.3-70B · Claude Sonnet 4.6 | Google · Groq · Anthropic |
+| Judge | Gemini 2.5 Flash · LLaMA-3.3-70B · Claude Sonnet 4.6 | Google · Groq · Anthropic |
 
 ---
 
 ## Project Structure
 
 ```
-PromptCircle/
-├── APIKeys.swift              — reads keys from gitignored plist
-├── APIKeys.plist              — your real keys (gitignored)
-├── APIKeys.plist.template     — placeholder keys, safe to commit
-├── Services/
-│   └── AIService.swift        — Gemini / Groq / Anthropic clients, per-call token limits
+CourtAi/
+├── Views/
+│   ├── CourtView.swift          # main UI — progressive phase reveal as pipeline runs
+│   └── OnboardingView.swift     # first-launch API key setup + model role selection
 ├── ViewModels/
-│   └── CourtViewModel.swift   — pipeline phases, prompt engineering, response parsing
-└── Views/
-    └── CourtView.swift        — full UI, light mode, progressive reveal
+│   └── CourtViewModel.swift     # pipeline orchestration, prompt templates, response parser
+└── Services/
+    ├── AIService.swift          # unified client for Gemini / Groq / Anthropic REST APIs
+    └── SessionLogger.swift      # appends each completed session to court_sessions.json
 ```
+
+**Stack:** SwiftUI · Swift Concurrency (`async let` for parallel calls, `@MainActor` for state) · MVVM · 3 REST APIs
 
 ---
 
-## Research Connection
+## Setup
 
-This system is prompt-engineered, not trained. The natural next steps:
+Requires Xcode 15+ and iOS 17+.
 
-- Use **verdict quality as a reward signal**
-- Train a **role assignment policy via RL** — instead of hardcoding which model argues FOR/AGAINST, learn optimal role assignment by question type
-- **Adaptive compute** — skip Hearing 2 when Hearing 1 shows strong consensus (connects to *Think Right: Adaptive Attentive Compression*)
-- **Synthetic deliberation datasets** — run the pipeline at scale to generate structured argument-evidence-verdict triples for fine-tuning
+```bash
+git clone https://github.com/your-username/CourtAI.git
+open CourtAi.xcodeproj
+```
 
-Directly related to: [Agentic Reasoning and Tool Integration via RL](https://lnkd.in/gDmg4nTf) · [Scaling Agentic Capabilities](https://lnkd.in/gp7bM-B2) · [Think Right](https://lnkd.in/gwZFWKcx)
+On first launch, the onboarding screen prompts for your API keys. Keys are stored in Keychain and are never written to disk or committed to the repository. You can update them at any time from the settings screen.
+
+| Provider | Key source |
+|----------|-----------|
+| Groq (LLaMA) | console.groq.com/keys |
+| Anthropic (Claude) | console.anthropic.com |
+| Google (Gemini) | aistudio.google.com/apikey |
+
+All three providers have free tiers sufficient for personal use. The research experiment (60 sessions) cost approximately $0.04 total.
+
+---
+
+## Research
+
+See [RESEARCH.md](RESEARCH.md) for the full paper.
+
+The core question: does it matter *which* model argues FOR vs AGAINST, or does the better argument always win regardless of who makes it? To test this, the same 15 questions were deliberated twice — once with LLaMA arguing FOR and Claude arguing AGAINST, and once with roles reversed. The judge model was held constant across both conditions to isolate the effect.
+
+The experiment was run twice with two different judge models (LLaMA-3.1-8B and Gemini 2.5 Flash), yielding 60 sessions total.
+
+| Finding | Result |
+|---------|--------|
+| Flip rate with LLaMA judge | 53% of verdicts changed when roles were swapped |
+| Flip rate with Gemini judge | 33% of verdicts changed |
+| Factual questions | 80% flip rate under both judges |
+| Ethical questions | 0% flip rate under both judges |
+| Gemini judge baseline | 87% NO rate — strong intrinsic skeptical bias |
+| Evidence quality | 94% of argument slots cited real facts (240 slots total) |
+
+The most consistent finding: **factual questions are paradoxically the most sensitive to role assignment.** Questions with empirical answers (coffee and health, remote work productivity, exercise vs medication) flipped at 80% under both judge models — suggesting that framing and evidence selection override factual consensus in these models.

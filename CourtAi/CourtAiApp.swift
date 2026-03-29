@@ -11,10 +11,15 @@ struct CourtAiApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if hasCompletedOnboarding {
-                CourtView()
-            } else {
-                OnboardingView()
+            Group {
+                if hasCompletedOnboarding {
+                    CourtView()
+                } else {
+                    OnboardingView()
+                }
+            }
+            .onAppear {
+                print("📁 Documents:", FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].path)
             }
         }
     }

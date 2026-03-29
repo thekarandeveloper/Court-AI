@@ -51,6 +51,7 @@ struct CourtView: View {
     var againstModel: AIService.AIModel { AIService.AIModel(rawValue: againstModelRaw) ?? .grok   }
     var judgeModel:   AIService.AIModel { AIService.AIModel(rawValue: judgeModelRaw)   ?? .claude }
 
+    
     var body: some View {
         ZStack {
             P.bg.ignoresSafeArea()
