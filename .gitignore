@@ -17,6 +17,7 @@ DerivedData/
 !default.mode2v3
 *.perspectivev3
 !default.perspectivev3
+.claude/
 
 # ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store

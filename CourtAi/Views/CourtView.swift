@@ -40,12 +40,11 @@ struct CourtView: View {
     @StateObject private var vm = CourtViewModel()
     @FocusState  private var focused: Bool
 
-    @AppStorage("forModelRaw")     private var forModelRaw     = "gemini"
-    @AppStorage("againstModelRaw") private var againstModelRaw = "grok"
-    @AppStorage("judgeModelRaw")   private var judgeModelRaw   = "claude"
+    @AppStorage("forModelRaw")     private var forModelRaw     = "grok"
+    @AppStorage("againstModelRaw") private var againstModelRaw = "claude"
+    @AppStorage("judgeModelRaw")   private var judgeModelRaw   = "gemini"
 
-    @State private var showSettings    = false
-    @State private var showTrialExpired = false
+    @State private var showSettings = false
 
     var forModel:     AIService.AIModel { AIService.AIModel(rawValue: forModelRaw)     ?? .gemini }
     var againstModel: AIService.AIModel { AIService.AIModel(rawValue: againstModelRaw) ?? .grok   }
@@ -71,8 +70,7 @@ struct CourtView: View {
         }
         .animation(.spring(duration: 0.45), value: vm.phase == .idle)
         .preferredColorScheme(.light)
-        .sheet(isPresented: $showSettings)    { SettingsView() }
-        .sheet(isPresented: $showTrialExpired) { TrialExpiredView() }
+        .sheet(isPresented: $showSettings) { SettingsView() }
     }
 
     // MARK: - Input Screen
@@ -148,10 +146,6 @@ struct CourtView: View {
 
                 Button {
                     focused = false
-                    guard TrialManager.isTrialActive || TrialManager.hasOwnKeys else {
-                        showTrialExpired = true
-                        return
-                    }
                     vm.forModel     = forModel
                     vm.againstModel = againstModel
                     vm.judgeModel   = judgeModel
@@ -188,25 +182,6 @@ struct CourtView: View {
             .padding(.horizontal, 24)
 
             Spacer()
-
-            // Trial badge
-            if !TrialManager.hasOwnKeys {
-                let remaining = TrialManager.usesRemaining
-                HStack(spacing: 5) {
-                    Image(systemName: remaining > 0 ? "gift.fill" : "lock.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(remaining > 0 ? Color(red: 0.62, green: 0.44, blue: 0.04) : P.muted)
-                    Text(remaining > 0
-                         ? "\(remaining) free session\(remaining == 1 ? "" : "s") left"
-                         : "Add your API keys to continue")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(remaining > 0 ? Color(red: 0.62, green: 0.44, blue: 0.04) : P.muted)
-                }
-                .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(remaining > 0 ? Color(red: 1.00, green: 0.97, blue: 0.87) : P.faint.opacity(0.6))
-                .clipShape(Capsule())
-                .padding(.bottom, 8)
-            }
 
             // Agent row — dynamic from user's role choices
             HStack(spacing: 6) {

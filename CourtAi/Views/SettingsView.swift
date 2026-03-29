@@ -6,9 +6,9 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("forModelRaw")            private var forModelRaw     = "gemini"
-    @AppStorage("againstModelRaw")        private var againstModelRaw = "grok"
-    @AppStorage("judgeModelRaw")          private var judgeModelRaw   = "claude"
+    @AppStorage("forModelRaw")            private var forModelRaw     = "grok"
+    @AppStorage("againstModelRaw")        private var againstModelRaw = "claude"
+    @AppStorage("judgeModelRaw")          private var judgeModelRaw   = "gemini"
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = true
 
     @Environment(\.dismiss) private var dismiss
@@ -18,7 +18,7 @@ struct SettingsView: View {
     @State private var groqKey   = KeychainHelper.load("GroqAPIKey")   ?? ""
     @State private var claudeKey = KeychainHelper.load("ClaudeAPIKey") ?? ""
 
-    private let allModels: [AIService.AIModel] = [.gemini, .grok, .claude]
+    private let allModels: [AIService.AIModel] = [.grok, .claude, .gemini]
 
     var body: some View {
         NavigationStack {

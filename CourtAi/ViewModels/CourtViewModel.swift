@@ -129,7 +129,6 @@ class CourtViewModel: ObservableObject {
             duration:      Date().timeIntervalSince(startTime)
         )
 
-        TrialManager.recordUse()
     }
 
     // MARK: - Response Parser

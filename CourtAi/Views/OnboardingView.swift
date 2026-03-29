@@ -2,19 +2,25 @@
 //  OnboardingView.swift
 //  CourtAi
 //
-//  First launch: Welcome → Role Picker (no keys needed, trial covers first 5 uses).
-//  After trial: separate TrialExpiredView prompts for keys.
-//
 
 import SwiftUI
 
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-    @AppStorage("forModelRaw")            private var forModelRaw   = "gemini"
-    @AppStorage("againstModelRaw")        private var againstModelRaw = "grok"
-    @AppStorage("judgeModelRaw")          private var judgeModelRaw = "claude"
+    @AppStorage("forModelRaw")            private var forModelRaw     = "grok"
+    @AppStorage("againstModelRaw")        private var againstModelRaw = "claude"
+    @AppStorage("judgeModelRaw")          private var judgeModelRaw   = "gemini"
 
-    @State private var step = 0
+    @State private var step       = 0
+    @State private var geminiKey  = ""
+    @State private var groqKey    = ""
+    @State private var claudeKey  = ""
+
+    private var keysValid: Bool {
+        !geminiKey.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !groqKey.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !claudeKey.trimmingCharacters(in: .whitespaces).isEmpty
+    }
 
     var body: some View {
         ZStack {
@@ -22,6 +28,7 @@ struct OnboardingView: View {
             VStack {
                 switch step {
                 case 0:  welcomeStep.transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                case 1:  keysStep.transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 default: rolesStep.transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 }
             }
@@ -36,19 +43,17 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             Spacer()
             VStack(spacing: 20) {
-                ZStack {
-                    Circle().fill(Color(red: 1.00, green: 0.97, blue: 0.87))
-                        .frame(width: 100, height: 100)
-                    Circle().stroke(Color(red: 0.80, green: 0.62, blue: 0.14).opacity(0.4), lineWidth: 1.5)
-                        .frame(width: 100, height: 100)
-                    Text("⚖").font(.system(size: 52))
-                }
+                Image("courtAILogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 90, height: 90)
                 VStack(spacing: 10) {
                     Text("CourtAI")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.13))
                     Text("Two sides. One truth.")
-                        .font(.system(size: 16)).foregroundColor(Color(red: 0.50, green: 0.50, blue: 0.54))
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(red: 0.50, green: 0.50, blue: 0.54))
                 }
                 VStack(spacing: 12) {
                     featureRow(icon: "person.3.fill",               text: "3 frontier AIs argue your question")
@@ -56,20 +61,6 @@ struct OnboardingView: View {
                     featureRow(icon: "hammer.fill",                 text: "One judge delivers a final ruling")
                 }
                 .padding(.top, 8)
-
-                // Trial badge
-                HStack(spacing: 6) {
-                    Image(systemName: "gift.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color(red: 0.62, green: 0.44, blue: 0.04))
-                    Text("\(TrialManager.maxFreeUses) free sessions included — no keys needed")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(red: 0.62, green: 0.44, blue: 0.04))
-                }
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .background(Color(red: 1.00, green: 0.97, blue: 0.87))
-                .clipShape(Capsule())
-                .padding(.top, 4)
             }
             .padding(.horizontal, 32)
             Spacer()
@@ -81,28 +72,76 @@ struct OnboardingView: View {
     private func featureRow(icon: String, text: String) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 14)).foregroundColor(Color(red: 0.62, green: 0.44, blue: 0.04))
+                .font(.system(size: 14))
+                .foregroundColor(Color(red: 0.62, green: 0.44, blue: 0.04))
                 .frame(width: 28)
-            Text(text).font(.system(size: 14)).foregroundColor(Color(red: 0.30, green: 0.30, blue: 0.34))
+            Text(text)
+                .font(.system(size: 14))
+                .foregroundColor(Color(red: 0.30, green: 0.30, blue: 0.34))
             Spacer()
         }
     }
 
-    // MARK: - Step 2: Role Picker
+    // MARK: - Step 2: API Keys
+
+    private var keysStep: some View {
+        VStack(spacing: 0) {
+            stepHeader(title: "Add Your API Keys", subtitle: "CourtAI uses three AI providers.\nAll have free tiers — takes 2 minutes.")
+            VStack(spacing: 10) {
+                keyField(label: "Gemini",  hint: "AIza…",   link: "aistudio.google.com",    text: $geminiKey)
+                keyField(label: "Groq",    hint: "gsk_…",   link: "console.groq.com/keys",  text: $groqKey)
+                keyField(label: "Claude",  hint: "sk-ant…", link: "console.anthropic.com",  text: $claudeKey)
+            }
+            .padding(.horizontal, 24)
+            Spacer()
+            bottomButton(label: "Continue", disabled: !keysValid) {
+                APIKeys.save(
+                    gemini: geminiKey.trimmingCharacters(in: .whitespaces),
+                    groq:   groqKey.trimmingCharacters(in: .whitespaces),
+                    claude: claudeKey.trimmingCharacters(in: .whitespaces)
+                )
+                withAnimation { step = 2 }
+            }
+            .padding(.horizontal, 24).padding(.bottom, 52)
+        }
+    }
+
+    private func keyField(label: String, hint: String, link: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.13))
+                Spacer()
+                Text(link)
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(red: 0.62, green: 0.44, blue: 0.04))
+            }
+            SecureField(hint, text: text)
+                .font(.system(size: 13, design: .monospaced))
+                .padding(12)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1))
+        }
+    }
+
+    // MARK: - Step 3: Role Picker
 
     private var rolesStep: some View {
-        let allModels: [AIService.AIModel] = [.gemini, .grok, .claude]
+        let allModels: [AIService.AIModel] = [.grok, .claude, .gemini]
         return VStack(spacing: 0) {
-            stepHeader(title: "Pick the Court", subtitle: "Assign each AI a role.\nYou can change this anytime in Settings.")
-            VStack(spacing: 20) {
-                rolePicker(role: "FOR",    emoji: "🟢", description: "Argues in favour",
+            stepHeader(title: "Set Up the Court", subtitle: "Assign each AI a role.\nYou can change this anytime in Settings.")
+            VStack(spacing: 16) {
+                rolePicker(role: "FOR",     emoji: "🟢", description: "Argues in favour",
                            selection: $forModelRaw,     locked: [againstModelRaw, judgeModelRaw], models: allModels)
                 rolePicker(role: "AGAINST", emoji: "🔴", description: "Argues against",
                            selection: $againstModelRaw, locked: [forModelRaw, judgeModelRaw],     models: allModels)
-                rolePicker(role: "JUDGE",  emoji: "⚖️", description: "Delivers the verdict",
+                rolePicker(role: "JUDGE",   emoji: "⚖️", description: "Delivers the verdict",
                            selection: $judgeModelRaw,   locked: [forModelRaw, againstModelRaw],   models: allModels)
             }
-            .padding(.horizontal, 24).padding(.top, 12)
+            .padding(.horizontal, 24).padding(.top, 8)
             Spacer()
             bottomButton(label: "Enter the Court") {
                 hasCompletedOnboarding = true
@@ -118,9 +157,11 @@ struct OnboardingView: View {
             HStack(spacing: 8) {
                 Text(emoji).font(.system(size: 16))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(role).font(.system(size: 13, weight: .bold))
+                    Text(role)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.13))
-                    Text(description).font(.system(size: 11))
+                    Text(description)
+                        .font(.system(size: 11))
                         .foregroundColor(Color(red: 0.50, green: 0.50, blue: 0.54))
                 }
             }
@@ -160,16 +201,19 @@ struct OnboardingView: View {
 
     private func stepHeader(title: String, subtitle: String) -> some View {
         VStack(spacing: 6) {
-            Text("Setup").font(.system(size: 11, weight: .semibold))
+            Text("CourtAI")
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Color(red: 0.62, green: 0.44, blue: 0.04))
                 .padding(.horizontal, 10).padding(.vertical, 4)
                 .background(Color(red: 1.00, green: 0.97, blue: 0.87))
                 .clipShape(Capsule())
                 .padding(.top, 56)
-            Text(title).font(.system(size: 26, weight: .bold, design: .rounded))
+            Text(title)
+                .font(.system(size: 26, weight: .bold, design: .rounded))
                 .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.13))
                 .padding(.top, 4)
-            Text(subtitle).font(.system(size: 13))
+            Text(subtitle)
+                .font(.system(size: 13))
                 .foregroundColor(Color(red: 0.50, green: 0.50, blue: 0.54))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -197,109 +241,5 @@ struct OnboardingView: View {
                         radius: 8, y: 3)
         }
         .disabled(disabled)
-    }
-}
-
-// MARK: - Trial Expired Paywall
-
-struct TrialExpiredView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var geminiKey = ""
-    @State private var groqKey   = ""
-    @State private var claudeKey = ""
-
-    private var keysValid: Bool {
-        !geminiKey.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !groqKey.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !claudeKey.trimmingCharacters(in: .whitespaces).isEmpty
-    }
-
-    var body: some View {
-        ZStack {
-            Color(red: 0.975, green: 0.965, blue: 0.950).ignoresSafeArea()
-            VStack(spacing: 0) {
-                Spacer()
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle().fill(Color(red: 1.00, green: 0.97, blue: 0.87)).frame(width: 80, height: 80)
-                        Text("🔑").font(.system(size: 36))
-                    }
-                    VStack(spacing: 8) {
-                        Text("Free sessions used up")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.13))
-                        Text("Add your own API keys to keep going.\nAll free — just needs your account.")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color(red: 0.50, green: 0.50, blue: 0.54))
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(.horizontal, 32)
-
-                Spacer().frame(height: 36)
-
-                VStack(spacing: 12) {
-                    keyField(label: "Gemini", hint: "AIza…",     color: Color(red: 0.09, green: 0.56, blue: 0.90), text: $geminiKey)
-                    keyField(label: "Groq",   hint: "gsk_…",     color: Color(red: 0.52, green: 0.32, blue: 0.88), text: $groqKey)
-                    keyField(label: "Claude", hint: "sk-ant…",   color: Color(red: 0.84, green: 0.46, blue: 0.10), text: $claudeKey)
-
-                    Text("Get free keys at aistudio.google.com · console.groq.com · console.anthropic.com")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color(red: 0.60, green: 0.60, blue: 0.62))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 24)
-
-                Spacer()
-
-                Button {
-                    APIKeys.save(
-                        gemini: geminiKey.trimmingCharacters(in: .whitespaces),
-                        groq:   groqKey.trimmingCharacters(in: .whitespaces),
-                        claude: claudeKey.trimmingCharacters(in: .whitespaces)
-                    )
-                    dismiss()
-                } label: {
-                    Text("Save Keys & Continue")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(keysValid ? .white : Color(red: 0.60, green: 0.60, blue: 0.62))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            keysValid
-                            ? AnyView(LinearGradient(
-                                colors: [Color(red: 0.72, green: 0.52, blue: 0.06),
-                                         Color(red: 0.88, green: 0.70, blue: 0.18)],
-                                startPoint: .leading, endPoint: .trailing))
-                            : AnyView(Color(red: 0.88, green: 0.87, blue: 0.85))
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: keysValid ? Color(red: 0.80, green: 0.62, blue: 0.14).opacity(0.35) : .clear,
-                                radius: 8, y: 3)
-                }
-                .disabled(!keysValid)
-                .padding(.horizontal, 24).padding(.bottom, 52)
-            }
-        }
-        .preferredColorScheme(.light)
-        .interactiveDismissDisabled(true)
-    }
-
-    private func keyField(label: String, hint: String, color: Color, text: Binding<String>) -> some View {
-        HStack(spacing: 10) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(Color(red: 0.10, green: 0.10, blue: 0.13))
-                .frame(width: 55, alignment: .leading)
-            SecureField(hint, text: text)
-                .font(.system(size: 12, design: .monospaced))
-        }
-        .padding(12)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10)
-            .stroke(Color.black.opacity(0.07), lineWidth: 1))
     }
 }
