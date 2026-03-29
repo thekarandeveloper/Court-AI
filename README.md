@@ -15,6 +15,12 @@ A 3-agent iOS deliberation system where two LLMs argue opposite sides of a quest
 
 ---
 
+## Demo
+
+[![Demo](./demo/thumb.png)](./demo/court-demo.mp4)
+
+---
+
 ## How It Works
 
 The pipeline runs in three sequential phases. Hearing 1 and 2 each make two API calls in parallel.
