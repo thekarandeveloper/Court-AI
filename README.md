@@ -15,7 +15,9 @@ A 3-agent iOS deliberation system where two LLMs argue opposite sides of a quest
 
 ---
 
-## Demo
+## Quick Look
+
+A full deliberation session — question in, verdict out — showing all three phases live on device.
 
 <video src="./demo/court-demo.mp4" controls width="100%"></video>
 
